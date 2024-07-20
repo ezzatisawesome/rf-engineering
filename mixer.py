@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class SineWave:
+class WaveForm:
     def __init__(
         self,
         amplitude: float = 1,
@@ -12,47 +12,70 @@ class SineWave:
         duration: float = 2,
         waveValues: np.ndarray = None,
     ):
+        self.amplitude: float = amplitude
+        self.frequency: float = frequency
+        self.phase: float = phase
         self.samplingRate: int = samplingRate
         self.duration: float = duration
         self.timeValues: np.ndarray = np.linspace(
             0, self.duration, int(self.samplingRate * self.duration), endpoint=False
         )
-        self.waveValues: np.ndarray = (
-            waveValues
-            if waveValues is not None
-            else amplitude * np.sin(2 * np.pi * frequency * self.timeValues + phase)
-        )
+        if waveValues is not None:
+            self.waveValues = waveValues
+        else:
+            self.generateWave()
 
-    def plotWave(self) -> None:
-        plt.figure(figsize=(10, 4))
-        plt.plot(self.timeValues, self.waveValues)
-        plt.title("Sine Wave")
-        plt.xlabel("Time [s]")
-        plt.ylabel("Amplitude")
-        plt.grid(True)
-        plt.show()
+    def generateWave(self):
+        raise NotImplementedError("Subclasses should implement this method.")
 
-    def __mul__(self, other: "SineWave") -> "SineWave":
-        if self.samplingRate != other.samplingRate or self.duration != other.duration:
+    def __mul__(self, factor: "WaveForm") -> "WaveForm":
+        if not isinstance(factor, WaveForm):
+            return NotImplemented
+        
+        if self.samplingRate != factor.samplingRate or self.duration != factor.duration:
             raise ValueError(
                 "Sampling rates and durations must match to multiply SineWave objects."
             )
 
-        new_wave_values = self.waveValues * other.waveValues
+        new_wave_values = self.waveValues * factor.waveValues
 
-        return SineWave(
+        return WaveForm(
             samplingRate=self.samplingRate,
             duration=self.duration,
             waveValues=new_wave_values,
         )
 
+    def plotWave(self) -> None:
+        plt.figure(figsize=(10, 4))
+        plt.plot(self.timeValues, self.waveValues)
+        plt.title(self.__class__.__name__)
+        plt.xlabel("Time [s]")
+        plt.ylabel("Amplitude")
+        plt.grid(True)
+        plt.show()
+
+
+class SineWave(WaveForm):
+    def generateWave(self):
+        self.waveValues = self.amplitude * np.sin(
+            2 * np.pi * self.frequency * self.timeValues + self.phase
+        )
+
+
+class SquareWave(WaveForm):
+    def generateWave(self):
+        self.waveValues = self.amplitude * np.sign(
+            np.sin(2 * np.pi * self.frequency * self.timeValues + self.phase)
+        )
+
 
 # Example usage
-sineWave1 = SineWave(1, 9, 0, 1000, 2)
-sineWave1.plotWave()
-sineWave2 = SineWave(1, 7, 0, 1000, 2)
-sineWave2.plotWave()
+sineWave = SineWave(1, 9, 0, 1000, 2)
+sineWave.plotWave()
 
-# Multiply the two sine waves
-resultWave = sineWave1 * sineWave2
+squareWave = SquareWave(1, 7, 0, 1000, 2)
+squareWave.plotWave()
+
+# Multiply the two waves
+resultWave = sineWave * 2
 resultWave.plotWave()
